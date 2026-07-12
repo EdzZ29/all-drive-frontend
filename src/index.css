@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Make Poppins the default sans-serif font across the app. */
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
