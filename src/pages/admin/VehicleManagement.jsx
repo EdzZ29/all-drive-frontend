@@ -243,7 +243,7 @@ const VehicleManagement = () => {
                         className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
                       >
                         <Pencil size={14} />
-                        Edit
+                        Edit...
                       </Link>
 
                       <button
