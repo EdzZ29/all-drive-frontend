@@ -9,6 +9,7 @@ import {
   Cog,
   Fuel,
   Users,
+  Calendar,
 } from 'lucide-react';
 
 import { vehiclesApi, ApiError } from '../../api';
@@ -17,6 +18,7 @@ const STATUS_STYLES = {
   Available: 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-200',
   Booked: 'bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200',
   Maintenance: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
+  Unlisted: 'bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-200',
 };
 
 const VehicleDetails = () => {
@@ -129,11 +131,13 @@ const VehicleDetails = () => {
           </div>
 
           {/* Spec pills */}
-          <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Spec icon={Palette} label="Color" value={vehicle.color} />
             <Spec icon={Cog} label="Transmission" value={vehicle.transmission} />
             <Spec icon={Fuel} label="Fuel type" value={vehicle.fuelType} />
             <Spec icon={Users} label="Seats" value={vehicle.seats} />
+            <Spec icon={Calendar} label="Year" value={vehicle.year} />
+            <Spec icon={Car} label="Type" value={vehicle.vehicleType} />
           </div>
 
           {vehicle.description && (

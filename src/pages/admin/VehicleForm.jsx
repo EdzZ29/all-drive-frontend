@@ -25,7 +25,7 @@ const EMPTY = {
 };
 
 const field =
-  'w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
+  'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
 const labelCls = 'mb-1.5 block text-sm font-medium text-gray-700';
 
 const VehicleForm = () => {
@@ -47,7 +47,6 @@ const VehicleForm = () => {
     vehiclesApi
       .getOne(id)
       .then((data) => {
-        console.log('vehicle data:', data);   // ← add this line
         if (!active) return;
         setForm({
           brand: data.brand ?? '',
@@ -160,7 +159,10 @@ const VehicleForm = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="mt-6 space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+      >
         {/* Image uploader */}
         <div>
           <label className={labelCls}>Vehicle image</label>

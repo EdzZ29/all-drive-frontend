@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/auth-context';
-import AuthHeader from '../components/AuthHeader';
+import AuthLayout from '../components/AuthLayout';
 import AuthErrorAlert from '../components/AuthErrorAlert';
 import { describeAuthError } from '../utils/authError';
 
@@ -73,21 +73,17 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <AuthHeader />
-      <div className="flex flex-1 items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
+    <AuthLayout>
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          Welcome back
+        </h1>
+        <p className="mt-1.5 text-sm text-gray-500">
+          Sign in to book and manage your rentals
+        </p>
+      </div>
 
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            Welcome back
-          </h1>
-          <p className="mt-1.5 text-sm text-gray-500">
-            Sign in to book and manage your rentals
-          </p>
-        </div>
-
-        <AuthErrorAlert error={error} onDismiss={() => setError(null)} />
+      <AuthErrorAlert error={error} onDismiss={() => setError(null)} />
 
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
@@ -188,9 +184,7 @@ const Login = () => {
         <p className="mt-10 text-center text-xs text-gray-400">
           © 2026 AllDrive Rent a Car • Butuan City
         </p>
-      </div>
-      </div>
-    </div>
+    </AuthLayout>
   );
 };
 

@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Trash2, Car, Pencil, Eye, X } from 'lucide-react';
+import { Plus, Trash2, Car, Pencil, Eye, X, Search } from 'lucide-react';
 
 import { vehiclesApi, ApiError } from '../../api';
 import Pagination from '../../components/Pagination';
 
 const STATUS_STYLES = {
-  Available: 'bg-green-50 text-green-700',
-  Booked: 'bg-blue-50 text-blue-700',
-  Maintenance: 'bg-amber-50 text-amber-700',
-  Unlisted: 'bg-gray-100 text-gray-500',
+  Available: 'bg-green-50 text-green-700 ring-green-600/20',
+  Booked: 'bg-blue-50 text-blue-700 ring-blue-600/20',
+  Maintenance: 'bg-amber-50 text-amber-700 ring-amber-600/20',
+  Unlisted: 'bg-gray-100 text-gray-500 ring-gray-500/20',
 };
 
 const STATUSES = ['Available', 'Booked', 'Maintenance', 'Unlisted'];
+const TRANSMISSIONS = ['Any', 'Automatic', 'Manual'];
 
 // Statuses an admin can set directly. "Booked" is managed automatically by the
 // booking workflow, so it's not offered here.
@@ -21,13 +22,44 @@ const MANAGE_STATUSES = [
   { value: 'Maintenance', label: 'Maintenance' },
   { value: 'Unlisted', label: "Don't display" },
 ];
-const TRANSMISSIONS = ['Automatic', 'Manual'];
-const VEHICLE_TYPES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Hatchback', 'MPV'];
 
-const EMPTY_FILTERS = { vehicleType: '', brand: '', status: '', transmission: '' };
+const EMPTY = {
+  search: '',
+  statuses: new Set(),
+  brands: new Set(),
+  bodyTypes: new Set(),
+  fuelTypes: new Set(),
+  transmission: 'Any',
+  priceMin: '',
+  priceMax: '',
+};
 
-const selectCls =
-  'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
+const toggleIn = (set, value) => {
+  const next = new Set(set);
+  next.has(value) ? next.delete(value) : next.add(value);
+  return next;
+};
+
+const FilterSection = ({ title, children }) => (
+  <div className="border-t border-gray-100 py-4">
+    <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+      {title}
+    </p>
+    {children}
+  </div>
+);
+
+const CheckRow = ({ label, checked, onChange }) => (
+  <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-gray-700">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+    />
+    {label}
+  </label>
+);
 
 const VehicleManagement = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -35,15 +67,15 @@ const VehicleManagement = () => {
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [statusUpdatingId, setStatusUpdatingId] = useState(null);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
-  const [perPage, setPerPage] = useState(5);
+  const [f, setF] = useState(EMPTY);
+  const [perPage, setPerPage] = useState(12);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     let active = true;
     vehiclesApi
       .list()
-      .then((data) => active && setVehicles(data))
+      .then((data) => active && setVehicles(Array.isArray(data) ? data : []))
       .catch(
         (err) =>
           active &&
@@ -81,52 +113,76 @@ const VehicleManagement = () => {
     }
   };
 
-  // Brands come from the actual data since they vary per fleet;
-  // the rest are fixed option sets.
-  const brandOptions = useMemo(
-    () => [...new Set(vehicles.map((v) => v.brand).filter(Boolean))].sort(),
-    [vehicles],
-  );
+  const opts = useMemo(() => {
+    const uniq = (key) =>
+      [...new Set(vehicles.map((v) => v[key]).filter(Boolean))].sort((a, b) =>
+        String(a).localeCompare(String(b)),
+      );
+    return {
+      brands: uniq('brand'),
+      bodyTypes: uniq('vehicleType'),
+      fuelTypes: uniq('fuelType'),
+    };
+  }, [vehicles]);
 
-  const filteredVehicles = useMemo(() => {
+  const filtered = useMemo(() => {
+    const q = f.search.trim().toLowerCase();
+    const min = f.priceMin ? Number(f.priceMin) : null;
+    const max = f.priceMax ? Number(f.priceMax) : null;
     return vehicles.filter((v) => {
-      if (filters.vehicleType && v.vehicleType !== filters.vehicleType) return false;
-      if (filters.brand && v.brand !== filters.brand) return false;
-      if (filters.status && v.status !== filters.status) return false;
-      if (filters.transmission && v.transmission !== filters.transmission) return false;
+      if (q) {
+        const hay = [v.brand, v.model, v.vehicleType, v.color, v.year, v.plateNumber]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      const rate = Number(v.dailyRate);
+      if (min != null && rate < min) return false;
+      if (max != null && rate > max) return false;
+      if (f.statuses.size && !f.statuses.has(v.status)) return false;
+      if (f.brands.size && !f.brands.has(v.brand)) return false;
+      if (f.bodyTypes.size && !f.bodyTypes.has(v.vehicleType)) return false;
+      if (f.fuelTypes.size && !f.fuelTypes.has(v.fuelType)) return false;
+      if (f.transmission !== 'Any' && v.transmission !== f.transmission) return false;
       return true;
     });
-  }, [vehicles, filters]);
+  }, [vehicles, f]);
 
-  const updateFilter = (key) => (e) => {
-    setFilters((prev) => ({ ...prev, [key]: e.target.value }));
-    setPage(1);
-  };
-
-  const hasActiveFilters = Object.values(filters).some(Boolean);
-
-  // Paginate the filtered list.
-  const totalPages = Math.max(1, Math.ceil(filteredVehicles.length / perPage));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, totalPages);
-  const pagedVehicles = filteredVehicles.slice(
+  const visible = filtered.slice(
     (currentPage - 1) * perPage,
     currentPage * perPage,
   );
 
-  const handlePerPage = (n) => {
-    setPerPage(n);
+  const patch = (changes) => {
+    setF((prev) => ({ ...prev, ...changes }));
+    setPage(1);
+  };
+  const resetAll = () => {
+    setF(EMPTY);
     setPage(1);
   };
 
+  const activeCount =
+    (f.search ? 1 : 0) +
+    (f.priceMin || f.priceMax ? 1 : 0) +
+    f.statuses.size +
+    f.brands.size +
+    f.bodyTypes.size +
+    f.fuelTypes.size +
+    (f.transmission !== 'Any' ? 1 : 0);
+
   return (
     <div className="mx-auto max-w-10xl px-6 py-8">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
             Vehicles
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Manage your fleet. Added vehicles show up on the Browse Fleet page.
+            {loading ? 'Loading…' : `${filtered.length} vehicles in the fleet`}
           </p>
         </div>
         <Link
@@ -138,196 +194,254 @@ const VehicleManagement = () => {
         </Link>
       </div>
 
-      {/* Filter bar */}
-      <div className="mb-4 flex flex-wrap items-center gap-2.5">
-        <select
-          value={filters.vehicleType}
-          onChange={updateFilter('vehicleType')}
-          className={selectCls}
-        >
-          <option value="">All types</option>
-          {VEHICLE_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* Filter sidebar */}
+        <aside className="w-full flex-shrink-0 lg:w-60">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 lg:sticky lg:top-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-900">Filter by</h2>
+              {activeCount > 0 && (
+                <button
+                  onClick={resetAll}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                >
+                  <X size={13} /> Reset
+                </button>
+              )}
+            </div>
 
-        <select value={filters.brand} onChange={updateFilter('brand')} className={selectCls}>
-          <option value="">All brands</option>
-          {brandOptions.map((b) => (
-            <option key={b} value={b}>{b}</option>
-          ))}
-        </select>
+            <div className="relative">
+              <Search
+                size={15}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
+              <input
+                type="text"
+                value={f.search}
+                onChange={(e) => patch({ search: e.target.value })}
+                placeholder="Search…"
+                className="w-full rounded-xl border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder-gray-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
 
-        <select value={filters.status} onChange={updateFilter('status')} className={selectCls}>
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+            <FilterSection title="Status">
+              {STATUSES.map((s) => (
+                <CheckRow
+                  key={s}
+                  label={s}
+                  checked={f.statuses.has(s)}
+                  onChange={() => patch({ statuses: toggleIn(f.statuses, s) })}
+                />
+              ))}
+            </FilterSection>
 
-        <select
-          value={filters.transmission}
-          onChange={updateFilter('transmission')}
-          className={selectCls}
-        >
-          <option value="">All transmissions</option>
-          {TRANSMISSIONS.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+            
 
-        {hasActiveFilters && (
-          <button
-            onClick={() => {
-              setFilters(EMPTY_FILTERS);
-              setPage(1);
-            }}
-            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-          >
-            <X size={14} />
-            Clear
-          </button>
-        )}
+            {opts.brands.length > 0 && (
+              <FilterSection title="Brand">
+                <div className="max-h-40 space-y-0.5 overflow-y-auto pr-1">
+                  {opts.brands.map((b) => (
+                    <CheckRow
+                      key={b}
+                      label={b}
+                      checked={f.brands.has(b)}
+                      onChange={() => patch({ brands: toggleIn(f.brands, b) })}
+                    />
+                  ))}
+                </div>
+              </FilterSection>
+            )}
 
-        {!loading && !error && (
-          <span className="ml-auto text-sm text-gray-400">
-            {filteredVehicles.length} of {vehicles.length} vehicles
-          </span>
-        )}
-      </div>
+            {opts.bodyTypes.length > 0 && (
+              <FilterSection title="Body type">
+                <div className="grid grid-cols-2 gap-x-3">
+                  {opts.bodyTypes.map((t) => (
+                    <CheckRow
+                      key={t}
+                      label={t}
+                      checked={f.bodyTypes.has(t)}
+                      onChange={() => patch({ bodyTypes: toggleIn(f.bodyTypes, t) })}
+                    />
+                  ))}
+                </div>
+              </FilterSection>
+            )}
 
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-        {loading ? (
-          <p className="px-5 py-6 text-sm text-gray-500">Loading…</p>
-        ) : error ? (
-          <p className="px-5 py-6 text-sm text-red-600">{error}</p>
-        ) : vehicles.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <Car size={36} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-sm text-gray-500">
-              No vehicles yet.{' '}
-              <Link to="/admin/vehicles/new" className="font-medium text-blue-600 hover:text-blue-700">
-                Add your first vehicle
-              </Link>
-              .
-            </p>
+            <FilterSection title="Transmission">
+              <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+                {TRANSMISSIONS.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => patch({ transmission: t })}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition ${
+                      f.transmission === t
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </FilterSection>
+
+            {opts.fuelTypes.length > 0 && (
+              <FilterSection title="Fuel type">
+                <div className="grid grid-cols-2 gap-x-3">
+                  {opts.fuelTypes.map((ft) => (
+                    <CheckRow
+                      key={ft}
+                      label={ft}
+                      checked={f.fuelTypes.has(ft)}
+                      onChange={() => patch({ fuelTypes: toggleIn(f.fuelTypes, ft) })}
+                    />
+                  ))}
+                </div>
+              </FilterSection>
+            )}
           </div>
-        ) : filteredVehicles.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <Car size={36} className="mx-auto mb-2 text-gray-300" />
-            <p className="text-sm text-gray-500">
-              No vehicles match these filters.{' '}
-              <button
-                onClick={() => {
-              setFilters(EMPTY_FILTERS);
-              setPage(1);
-            }}
-                className="font-medium text-blue-600 hover:text-blue-700"
-              >
-                Clear filters
-              </button>
-              .
-            </p>
-          </div>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-400">
-                <th className="px-5 py-3 font-medium">Vehicle</th>
-                <th className="px-5 py-3 font-medium">Plate</th>
-                <th className="px-5 py-3 font-medium">Rate/day</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedVehicles.map((v) => (
-                <tr key={v.id} className="border-t border-gray-100">
-                  <td className="px-5 py-3">
-                    <Link to={`/admin/vehicles/${v.id}`} className="group flex items-center gap-3">
-                      <div className="flex h-10 w-14 items-center justify-center overflow-hidden rounded-md bg-gray-50">
-                        {v.image ? (
-                          <img src={v.image} alt={v.model} className="h-full w-full object-contain" />
-                        ) : (
-                          <Car size={18} className="text-gray-300" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900 group-hover:text-blue-600">
+        </aside>
+
+        {/* Card grid */}
+        <div className="min-w-0 flex-1">
+          {loading ? (
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-72 animate-pulse rounded-2xl border border-gray-100 bg-white" />
+              ))}
+            </div>
+          ) : error ? (
+            <p className="text-red-600">{error}</p>
+          ) : vehicles.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center">
+              <Car size={40} className="mx-auto mb-3 text-gray-300" />
+              <p className="text-sm text-gray-500">
+                No vehicles yet.{' '}
+                <Link to="/admin/vehicles/new" className="font-medium text-blue-600 hover:text-blue-700">
+                  Add your first vehicle
+                </Link>
+                .
+              </p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center">
+              <Car size={40} className="mx-auto mb-3 text-gray-300" />
+              <p className="text-sm text-gray-500">
+                No vehicles match your filters.{' '}
+                <button onClick={resetAll} className="font-medium text-blue-600 hover:text-blue-700">
+                  Reset filters
+                </button>
+                .
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {visible.map((v) => (
+                  <div
+                    key={v.id}
+                    className="flex flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+                  >
+                    {/* Image + status */}
+                    <div className="relative mb-3 flex h-32 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
+                      <span
+                        className={`absolute left-2 top-2 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 ${
+                          STATUS_STYLES[v.status] ?? 'bg-gray-100 text-gray-700 ring-gray-300'
+                        }`}
+                      >
+                        {v.status}
+                      </span>
+                      {v.image ? (
+                        <img src={v.image} alt={v.model} className="h-full w-full object-contain" />
+                      ) : (
+                        <Car size={52} className="text-gray-300" strokeWidth={1.5} />
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold text-gray-900">
                           {v.year} {v.brand} {v.model}
+                        </h3>
+                        <p className="truncate text-xs text-gray-500">
+                          {v.vehicleType} · {v.transmission} · {v.seats} seats
                         </p>
-                        <p className="text-xs text-gray-400">
-                          {v.transmission} · {v.fuelType} · {v.seats} seats
-                        </p>
+                        <p className="mt-0.5 text-xs text-gray-400">Plate {v.plateNumber}</p>
                       </div>
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 text-gray-600">{v.plateNumber}</td>
-                  <td className="px-5 py-3 text-gray-600">
-                    ₱{Number(v.dailyRate).toLocaleString()}
-                  </td>
-                  <td className="px-5 py-3">
-                    <select
-                      value={v.status}
-                      disabled={statusUpdatingId === v.id}
-                      onChange={(e) => handleStatusChange(v.id, e.target.value)}
-                      title="Set availability"
-                      className={`cursor-pointer rounded-full border-0 py-1 pl-2.5 pr-6 text-xs font-medium outline-none ring-1 ring-inset ring-black/5 focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50 ${
-                        STATUS_STYLES[v.status] ?? 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {/* Booked is set automatically; show it as read-only current. */}
-                      {v.status === 'Booked' && <option value="Booked">Booked</option>}
-                      {MANAGE_STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-end gap-1">
+                      <div className="whitespace-nowrap text-right">
+                        <span className="text-base font-bold text-blue-600">
+                          ₱{Number(v.dailyRate).toLocaleString()}
+                        </span>
+                        <span className="block text-[11px] text-gray-400">/ day</span>
+                      </div>
+                    </div>
+
+                    {/* Availability control */}
+                    <div className="mt-3">
+                      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                        Availability
+                      </label>
+                      <select
+                        value={v.status}
+                        disabled={statusUpdatingId === v.id}
+                        onChange={(e) => handleStatusChange(v.id, e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
+                      >
+                        {v.status === 'Booked' && <option value="Booked">Booked (auto)</option>}
+                        {MANAGE_STATUSES.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Actions — at the bottom of the card */}
+                    <div className="mt-4 grid grid-cols-3 gap-2 border-t border-gray-100 pt-3">
                       <Link
                         to={`/admin/vehicles/${v.id}`}
-                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
+                        className="inline-flex items-center justify-center gap-1 rounded-lg border border-gray-300 px-2 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
                       >
                         <Eye size={14} />
                         View
                       </Link>
-
                       <Link
                         to={`/admin/vehicles/${v.id}/edit`}
-                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
+                        className="inline-flex items-center justify-center gap-1 rounded-lg border border-blue-300 px-2 py-2 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
                       >
                         <Pencil size={14} />
-                        Edit...
+                        Edit
                       </Link>
-
                       <button
                         onClick={() => handleDelete(v.id)}
                         disabled={deletingId === v.id}
-                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-300 px-2 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
                       >
                         <Trash2 size={14} />
-                        {deletingId === v.id ? 'Deleting…' : 'Delete'}
+                        {deletingId === v.id ? '…' : 'Delete'}
                       </button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+                  </div>
+                ))}
+              </div>
 
-        {!loading && !error && filteredVehicles.length > 0 && (
-          <Pagination
-            page={currentPage}
-            perPage={perPage}
-            totalItems={filteredVehicles.length}
-            onPageChange={setPage}
-            onPerPageChange={handlePerPage}
-          />
-        )}
+              <div className="mt-6 rounded-2xl border border-gray-200 bg-white">
+                <Pagination
+                  page={currentPage}
+                  perPage={perPage}
+                  totalItems={filtered.length}
+                  onPageChange={setPage}
+                  onPerPageChange={(n) => {
+                    setPerPage(n);
+                    setPage(1);
+                  }}
+                  options={[6, 12, 18, 24]}
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

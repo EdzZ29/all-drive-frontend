@@ -14,6 +14,7 @@ import VehicleDetailsLanding from "./pages/ViewDetailsLanding";
 import FleetListing from "./pages/FleetListing";
 import Booking from "./pages/client/Booking";
 import BookingManagement from "./pages/admin/BookingManagement";
+import BookingHistory from "./pages/admin/BookingHistory";
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
       >
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="bookings" element={<BookingManagement />} />
+        <Route path="bookings/history" element={<BookingHistory />} />
         <Route path="vehicles" element={<VehicleManagement />} />
         <Route path="vehicles/:id" element={<VehicleDetails />} />
         <Route path="vehicles/:id/edit" element={<VehicleForm />} />

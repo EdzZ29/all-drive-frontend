@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Check, X } from 'lucide-react';
 import { useAuth } from '../context/auth-context';
-import AuthHeader from '../components/AuthHeader';
+import AuthLayout from '../components/AuthLayout';
 import AuthErrorAlert from '../components/AuthErrorAlert';
 import { describeAuthError } from '../utils/authError';
 
@@ -105,20 +105,17 @@ const Register = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <AuthHeader />
-      <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-              Create your account
-            </h1>
-            <p className="mt-1.5 text-sm text-gray-500">
-              Sign up to book and manage your rentals
-            </p>
-          </div>
+    <AuthLayout>
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          Create your account
+        </h1>
+        <p className="mt-1.5 text-sm text-gray-500">
+          Sign up to book and manage your rentals
+        </p>
+      </div>
 
-          <AuthErrorAlert error={error} onDismiss={() => setError(null)} />
+      <AuthErrorAlert error={error} onDismiss={() => setError(null)} />
 
           <div className="grid">
             <button
@@ -268,9 +265,7 @@ const Register = () => {
           <p className="mt-10 text-center text-xs text-gray-400">
             © 2026 AllDrive Rent a Car • Butuan City
           </p>
-        </div>
-      </div>
-    </div>
+    </AuthLayout>
   );
 };
 
