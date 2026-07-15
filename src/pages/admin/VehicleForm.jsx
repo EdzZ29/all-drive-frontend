@@ -6,7 +6,7 @@ import { vehiclesApi, uploadsApi, ApiError } from '../../api';
 
 const TRANSMISSIONS = ['Automatic', 'Manual'];
 const FUEL_TYPES = ['Gasoline', 'Diesel', 'Electric', 'Hybrid'];
-const STATUSES = ['Available', 'Booked', 'Maintenance'];
+const STATUSES = ['Available', 'Booked', 'Maintenance', 'Unlisted'];
 const VEHICLE_TYPES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Hatchback', 'MPV'];
 
 const EMPTY = {

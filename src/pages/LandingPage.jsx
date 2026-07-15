@@ -61,18 +61,35 @@ const StarRating = ({ rating }) => {
   );
 };
 
+const PAGE_SIZE = 6;
+const ROTATE_MS = 5000;
+
 const LandingPage = () => {
   const { user, logout } = useAuth();
-  const [vehicles, setVehicles] = useState([]);
+  const [allVehicles, setAllVehicles] = useState([]);
+  const [offset, setOffset] = useState(0);
   const [fleetLoading, setFleetLoading] = useState(true);
   const [fleetError, setFleetError] = useState('');
 
-  // Public endpoint — guests can browse the fleet. Show the first 6.
+  // Public endpoint — guests can browse the fleet. We load the whole catalogue
+  // but only ever render 6 cards at a time (see `visibleVehicles` below).
   useEffect(() => {
     let active = true;
     vehiclesApi
       .list()
-      .then((data) => active && setVehicles(data.slice(0, 6)))
+      // Booked and admin-hidden (Unlisted) vehicles are excluded from the
+      // public fleet display.
+      .then(
+        (data) =>
+          active &&
+          setAllVehicles(
+            Array.isArray(data)
+              ? data.filter(
+                  (v) => v.status !== 'Booked' && v.status !== 'Unlisted',
+                )
+              : [],
+          ),
+      )
       .catch(
         (err) =>
           active &&
@@ -86,6 +103,27 @@ const LandingPage = () => {
     };
   }, []);
 
+  // Rotate the visible window every 5 seconds so all vehicles get airtime,
+  // while never showing more than 6 cards at once. No-op when there are 6
+  // or fewer vehicles (nothing to rotate to).
+  useEffect(() => {
+    if (allVehicles.length <= PAGE_SIZE) return;
+    const timer = setInterval(() => {
+      setOffset((prev) => (prev + PAGE_SIZE) % allVehicles.length);
+    }, ROTATE_MS);
+    return () => clearInterval(timer);
+  }, [allVehicles.length]);
+
+  // The 6 cards currently on screen. Wraps around the end of the list so the
+  // window always stays full.
+  const visibleVehicles =
+    allVehicles.length <= PAGE_SIZE
+      ? allVehicles
+      : Array.from(
+          { length: PAGE_SIZE },
+          (_, i) => allVehicles[(offset + i) % allVehicles.length],
+        );
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
@@ -95,7 +133,7 @@ const LandingPage = () => {
 
           <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
             <Link to="/" className="text-gray-900 hover:text-blue-600">Home</Link>
-            <Link to="/about" className="text-gray-600 hover:text-blue-600">Our Fleet</Link>
+            <Link to="/vehicles" className="text-gray-600 hover:text-blue-600">Our Fleet</Link>
             <Link to="/about" className="text-gray-600 hover:text-blue-600">About Us</Link>
             <Link to="/services" className="text-gray-600 hover:text-blue-600">Services</Link>
             <Link to="/contact" className="text-gray-600 hover:text-blue-600">Contact</Link>
@@ -156,6 +194,11 @@ const LandingPage = () => {
             <span className="text-sm font-medium text-gray-700">5.0</span>
             <span className="text-sm text-gray-400">from 80+ reviews</span>
           </div>
+
+
+          <div className='mt-4'>
+            <span className='text-gray-400'>SAFE TRIP | COMFORT DRIVE | <span className='text-blue-600'>ALL DRIVE</span></span>
+          </div>
         </div>
       </section>
 
@@ -198,21 +241,21 @@ const LandingPage = () => {
             </div>
           ) : fleetError ? (
             <p className="text-center text-red-600">{fleetError}</p>
-          ) : vehicles.length === 0 ? (
+          ) : visibleVehicles.length === 0 ? (
             <p className="text-center text-gray-500">
               No vehicles available yet. Please check back soon.
             </p>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {vehicles.map((vehicle) => (
+              {visibleVehicles.map((vehicle) => (
                 <VehicleCard key={vehicle.id} vehicle={vehicle} />
               ))}
             </div>
           )}
-          
+
           <div className="mt-10 text-center">
             <Link
-              to="/cars"
+              to="/vehicles"
               className="inline-flex items-center gap-2 rounded-2xl border border-gray-300 bg-white px-8 py-3.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
             >
               View All Vehicles

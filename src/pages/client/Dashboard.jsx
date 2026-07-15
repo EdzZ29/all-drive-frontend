@@ -7,9 +7,11 @@ import { bookingsApi, ApiError } from '../../api';
 
 const STATUS_STYLES = {
   Pending: 'bg-amber-50 text-amber-700',
-  Confirmed: 'bg-blue-50 text-blue-700',
+  Approved: 'bg-blue-50 text-blue-700',
+  Returned: 'bg-purple-50 text-purple-700',
   Completed: 'bg-green-50 text-green-700',
-  Cancelled: 'bg-red-50 text-red-700',
+  Declined: 'bg-red-50 text-red-700',
+  Cancelled: 'bg-gray-100 text-gray-500',
 };
 
 const Dashboard = () => {
@@ -35,7 +37,7 @@ const Dashboard = () => {
   }, []);
 
   const activeCount = bookings.filter(
-    (b) => b.status === 'Pending' || b.status === 'Confirmed',
+    (b) => b.status === 'Pending' || b.status === 'Approved',
   ).length;
 
   return (

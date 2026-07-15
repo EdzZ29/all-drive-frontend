@@ -11,14 +11,29 @@ import AdminLayout from "./components/admin/AdminLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import VehicleDetails from "./pages/admin/VehicleDetails";
 import VehicleDetailsLanding from "./pages/ViewDetailsLanding";
+import FleetListing from "./pages/FleetListing";
+import Booking from "./pages/client/Booking";
+import BookingManagement from "./pages/admin/BookingManagement";
 
 function App() {
   return (
     <Routes>
+      {/* Public — guests can browse the fleet and view details */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="vehicles/:id" element={<VehicleDetailsLanding />} />
+      <Route path="/vehicles" element={<FleetListing />} />
+      <Route path="/vehicles/:id" element={<VehicleDetailsLanding />} />
+
+      {/* Booking requires a logged-in client */}
+      <Route
+        path="/booking/:id"
+        element={
+          <ProtectedRoute role="client">
+            <Booking />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin area — sidebar layout, admin-only. Add more admin pages as
           nested routes here and they inherit the sidebar automatically. */}
@@ -31,6 +46,7 @@ function App() {
         }
       >
         <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="bookings" element={<BookingManagement />} />
         <Route path="vehicles" element={<VehicleManagement />} />
         <Route path="vehicles/:id" element={<VehicleDetails />} />
         <Route path="vehicles/:id/edit" element={<VehicleForm />} />
@@ -43,7 +59,6 @@ function App() {
         element={
           <ProtectedRoute role="client">
             <ClientDashboard />
-            <Route path="vehicles" element={<VehicleManagement />} />
           </ProtectedRoute>
         }
       />

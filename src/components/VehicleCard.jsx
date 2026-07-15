@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom';
 import { Star, Fuel, Settings2, Users, Car, ArrowUpRight } from 'lucide-react';
 
+import { useAuth } from '../context/auth-context';
+
 // Card for a single vehicle, matching the fleet design.
 // `vehicle` is the shape returned by GET /api/vehicles.
 const VehicleCard = ({ vehicle }) => {
+  const { isClient } = useAuth();
   const {
     id,
     brand,
@@ -97,10 +100,11 @@ const VehicleCard = ({ vehicle }) => {
         ))}
       </div>
 
-      {/* Actions */}
+      {/* Actions. Guests are sent to log in first; logged-in clients go
+          straight to the booking form. Unavailable vehicles can't be booked. */}
       <div className="mt-4 flex gap-2">
         <Link
-          to={isAvailable ? '/login' : '#'}
+          to={isAvailable ? (isClient ? `/booking/${id}` : '/login') : '#'}
           onClick={(e) => !isAvailable && e.preventDefault()}
           className={`flex-1 rounded-xl px-4 py-2.5 text-center text-sm font-semibold text-white transition ${
             isAvailable

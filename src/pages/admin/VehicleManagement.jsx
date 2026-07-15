@@ -3,14 +3,24 @@ import { Link } from 'react-router-dom';
 import { Plus, Trash2, Car, Pencil, Eye, X } from 'lucide-react';
 
 import { vehiclesApi, ApiError } from '../../api';
+import Pagination from '../../components/Pagination';
 
 const STATUS_STYLES = {
   Available: 'bg-green-50 text-green-700',
   Booked: 'bg-blue-50 text-blue-700',
   Maintenance: 'bg-amber-50 text-amber-700',
+  Unlisted: 'bg-gray-100 text-gray-500',
 };
 
-const STATUSES = ['Available', 'Booked', 'Maintenance'];
+const STATUSES = ['Available', 'Booked', 'Maintenance', 'Unlisted'];
+
+// Statuses an admin can set directly. "Booked" is managed automatically by the
+// booking workflow, so it's not offered here.
+const MANAGE_STATUSES = [
+  { value: 'Available', label: 'Available' },
+  { value: 'Maintenance', label: 'Maintenance' },
+  { value: 'Unlisted', label: "Don't display" },
+];
 const TRANSMISSIONS = ['Automatic', 'Manual'];
 const VEHICLE_TYPES = ['Sedan', 'SUV', 'Pickup', 'Van', 'Hatchback', 'MPV'];
 
@@ -24,7 +34,10 @@ const VehicleManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [statusUpdatingId, setStatusUpdatingId] = useState(null);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [perPage, setPerPage] = useState(5);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let active = true;
@@ -55,6 +68,19 @@ const VehicleManagement = () => {
     }
   };
 
+  // Quick status change: Available / Maintenance / Don't display (Unlisted).
+  const handleStatusChange = async (id, status) => {
+    setStatusUpdatingId(id);
+    try {
+      const updated = await vehiclesApi.update(id, { status });
+      setVehicles((prev) => prev.map((v) => (v.id === id ? updated : v)));
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : 'Failed to update status');
+    } finally {
+      setStatusUpdatingId(null);
+    }
+  };
+
   // Brands come from the actual data since they vary per fleet;
   // the rest are fixed option sets.
   const brandOptions = useMemo(
@@ -72,10 +98,25 @@ const VehicleManagement = () => {
     });
   }, [vehicles, filters]);
 
-  const updateFilter = (key) => (e) =>
+  const updateFilter = (key) => (e) => {
     setFilters((prev) => ({ ...prev, [key]: e.target.value }));
+    setPage(1);
+  };
 
   const hasActiveFilters = Object.values(filters).some(Boolean);
+
+  // Paginate the filtered list.
+  const totalPages = Math.max(1, Math.ceil(filteredVehicles.length / perPage));
+  const currentPage = Math.min(page, totalPages);
+  const pagedVehicles = filteredVehicles.slice(
+    (currentPage - 1) * perPage,
+    currentPage * perPage,
+  );
+
+  const handlePerPage = (n) => {
+    setPerPage(n);
+    setPage(1);
+  };
 
   return (
     <div className="mx-auto max-w-10xl px-6 py-8">
@@ -137,7 +178,10 @@ const VehicleManagement = () => {
 
         {hasActiveFilters && (
           <button
-            onClick={() => setFilters(EMPTY_FILTERS)}
+            onClick={() => {
+              setFilters(EMPTY_FILTERS);
+              setPage(1);
+            }}
             className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
           >
             <X size={14} />
@@ -174,7 +218,10 @@ const VehicleManagement = () => {
             <p className="text-sm text-gray-500">
               No vehicles match these filters.{' '}
               <button
-                onClick={() => setFilters(EMPTY_FILTERS)}
+                onClick={() => {
+              setFilters(EMPTY_FILTERS);
+              setPage(1);
+            }}
                 className="font-medium text-blue-600 hover:text-blue-700"
               >
                 Clear filters
@@ -194,7 +241,7 @@ const VehicleManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredVehicles.map((v) => (
+              {pagedVehicles.map((v) => (
                 <tr key={v.id} className="border-t border-gray-100">
                   <td className="px-5 py-3">
                     <Link to={`/admin/vehicles/${v.id}`} className="group flex items-center gap-3">
@@ -220,13 +267,23 @@ const VehicleManagement = () => {
                     ₱{Number(v.dailyRate).toLocaleString()}
                   </td>
                   <td className="px-5 py-3">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    <select
+                      value={v.status}
+                      disabled={statusUpdatingId === v.id}
+                      onChange={(e) => handleStatusChange(v.id, e.target.value)}
+                      title="Set availability"
+                      className={`cursor-pointer rounded-full border-0 py-1 pl-2.5 pr-6 text-xs font-medium outline-none ring-1 ring-inset ring-black/5 focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50 ${
                         STATUS_STYLES[v.status] ?? 'bg-gray-100 text-gray-700'
                       }`}
                     >
-                      {v.status}
-                    </span>
+                      {/* Booked is set automatically; show it as read-only current. */}
+                      {v.status === 'Booked' && <option value="Booked">Booked</option>}
+                      {MANAGE_STATUSES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
@@ -260,6 +317,16 @@ const VehicleManagement = () => {
               ))}
             </tbody>
           </table>
+        )}
+
+        {!loading && !error && filteredVehicles.length > 0 && (
+          <Pagination
+            page={currentPage}
+            perPage={perPage}
+            totalItems={filteredVehicles.length}
+            onPageChange={setPage}
+            onPerPageChange={handlePerPage}
+          />
         )}
       </div>
     </div>

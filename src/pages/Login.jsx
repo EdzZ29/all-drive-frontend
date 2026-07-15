@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/auth-context';
-import { ApiError } from '../api';
-import alldriveLogo from '../assets/images/all-drive.png';
+import AuthHeader from '../components/AuthHeader';
+import AuthErrorAlert from '../components/AuthErrorAlert';
+import { describeAuthError } from '../utils/authError';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
@@ -22,25 +23,46 @@ const FacebookIcon = () => (
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Where to send the user after a successful login (e.g. back to the booking
+  // they started as a guest). Only honoured for clients.
+  const from = location.state?.from;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(null);
+
+    // Custom validation (native browser bubbles are disabled via noValidate).
+    if (!email.trim()) {
+      setError({
+        title: 'Please enter your email address.',
+        action: 'Type the email you signed up with.',
+      });
+      return;
+    }
+    if (!password) {
+      setError({
+        title: 'Please enter your password.',
+        action: 'Your password can’t be empty.',
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const user = await login({ email, password });
-      navigate(user.role === 'admin' ? '/admin/dashboard' : '/client/dashboard');
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate(from || '/client/dashboard');
+      }
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : 'That email or password isn’t right. Try again.',
-      );
+      setError(describeAuthError(err, 'login'));
     } finally {
       setSubmitting(false);
     }
@@ -51,13 +73,10 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-12">
+    <div className="flex min-h-screen flex-col bg-white">
+      <AuthHeader />
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-
-        {/* Logo */}
-        <Link to="/" className="mb-5 flex flex-col items-center">
-          <img src={alldriveLogo} alt="AllDrive Logo" className="h-11 w-auto" />
-        </Link>
 
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
@@ -68,25 +87,9 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Modern Error Alert */}
-        {error && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 backdrop-blur-sm">
-            <svg className="mt-0.5 h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-            <span className="flex-1">{error}</span>
-            <button
-              onClick={() => setError('')}
-              className="text-red-400 transition hover:text-red-600"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
+        <AuthErrorAlert error={error} onDismiss={() => setError(null)} />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
               Email
@@ -185,6 +188,7 @@ const Login = () => {
         <p className="mt-10 text-center text-xs text-gray-400">
           © 2026 AllDrive Rent a Car • Butuan City
         </p>
+      </div>
       </div>
     </div>
   );
