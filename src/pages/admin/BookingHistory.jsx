@@ -92,7 +92,7 @@ const BookingHistory = () => {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-8">
+    <div className="mx-auto max-w-10xl px-6 py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
           Booking History

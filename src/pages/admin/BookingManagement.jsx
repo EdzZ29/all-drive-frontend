@@ -4,15 +4,11 @@ import {
   X,
   Undo2,
   CheckCheck,
-  Pencil,
   Car,
-  MapPin,
-  Building2,
-  Clock,
-  Phone,
   FileText,
   ShieldCheck,
   Eye,
+  Info,
 } from 'lucide-react';
 
 import { bookingsApi, ApiError } from '../../api';
@@ -72,7 +68,6 @@ const BookingManagement = () => {
   const [error, setError] = useState('');
   const [tab, setTab] = useState('All');
   const [busyId, setBusyId] = useState(null);
-  const [editing, setEditing] = useState(null); // booking being edited
   const [reviewing, setReviewing] = useState(null); // booking being validated
   const [perPage, setPerPage] = useState(5);
   const [page, setPage] = useState(1);
@@ -136,7 +131,6 @@ const BookingManagement = () => {
 
   const handleSaved = (updated) => {
     setBookings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
-    setEditing(null);
     setReviewing(null);
   };
 
@@ -188,9 +182,9 @@ const BookingManagement = () => {
               key={b.id}
               className="rounded-2xl border border-gray-200 bg-white p-5"
             >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                {/* Vehicle + client */}
-                <div className="flex items-start gap-3">
+              {/* Top: vehicle name + info icon */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div className="flex h-12 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50">
                     {b.vehicle?.image ? (
                       <img
@@ -202,151 +196,71 @@ const BookingManagement = () => {
                       <Car size={20} className="text-gray-300" />
                     )}
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-gray-900">
                       {b.vehicle
                         ? `${b.vehicle.year} ${b.vehicle.brand} ${b.vehicle.model}`
                         : `Vehicle #${b.vehicleId}`}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="truncate text-sm text-gray-500">
                       {b.client?.name || `Client #${b.clientId}`}
-                      {b.client?.email ? ` · ${b.client.email}` : ''}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-1.5">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      PAYMENT_STATUS_STYLES[b.paymentStatus] ??
-                      'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {b.paymentStatus || 'Unpaid'}
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
-                      b.documentsVerified
-                        ? 'bg-green-50 text-green-700'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {b.documentsVerified ? (
-                      <>
-                        <ShieldCheck size={12} /> Verified
-                      </>
-                    ) : (
-                      'Not verified'
-                    )}
-                  </span>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      STATUS_STYLES[b.status] ?? 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {b.status}
-                  </span>
-                </div>
-              </div>
-
-              {/* Details grid */}
-              <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-                <Detail label="Dates" value={`${b.startDate} → ${b.endDate}`} />
-                <Detail label="Drive type" value={b.driveType} />
-                <Detail
-                  label="Handover"
-                  value={
-                    <span className="inline-flex items-center gap-1">
-                      {b.handover === 'Delivery' ? (
-                        <MapPin size={13} className="text-blue-500" />
-                      ) : (
-                        <Building2 size={13} className="text-blue-500" />
-                      )}
-                      {b.handover === 'Delivery' ? 'Drop to client' : 'Client pickup'}
-                    </span>
-                  }
-                />
-                <Detail
-                  label="Total"
-                  value={`₱${Number(b.totalPrice).toLocaleString()}`}
-                />
-                {b.location && (
-                  <Detail label="Place" value={b.location} className="sm:col-span-2" />
-                )}
-                {b.pickupTime && (
-                  <Detail
-                    label="Time"
-                    value={
-                      <span className="inline-flex items-center gap-1">
-                        <Clock size={13} className="text-gray-400" />
-                        {b.pickupTime}
-                      </span>
-                    }
-                  />
-                )}
-                {b.contactPhone && (
-                  <Detail
-                    label="Contact"
-                    value={
-                      <span className="inline-flex items-center gap-1">
-                        <Phone size={13} className="text-gray-400" />
-                        {b.contactPhone}
-                      </span>
-                    }
-                  />
-                )}
-              </div>
-
-              {/* Payment + documents */}
-              {(b.paymentMethod ||
-                b.downpaymentAmount != null ||
-                b.idImage ||
-                b.licenseImage ||
-                b.downpaymentProof) && (
-                <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg bg-gray-50 p-3 text-sm sm:grid-cols-4">
-                  {b.paymentMethod && (
-                    <Detail label="Payment" value={b.paymentMethod} />
-                  )}
-                  {b.downpaymentAmount != null && (
-                    <Detail
-                      label="Down-payment (50%)"
-                      value={`₱${Number(b.downpaymentAmount).toLocaleString()}`}
-                    />
-                  )}
-                  {b.idType && <Detail label="ID type" value={b.idType} />}
-                  {b.licenseNumber && (
-                    <Detail label="License no." value={b.licenseNumber} />
-                  )}
-                  <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-4">
-                    <DocLink url={b.idImage} label="Valid ID" />
-                    <DocLink url={b.licenseImage} label="License" />
-                    <DocLink url={b.downpaymentProof} label="Payment receipt" />
-                  </div>
-                </div>
-              )}
-
-              {b.notes && (
-                <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600">
-                  <span className="font-medium text-gray-700">Notes:</span> {b.notes}
-                </p>
-              )}
-
-              {/* Actions */}
-              <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-gray-100 pt-4">
                 <button
                   onClick={() => setReviewing(b)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-1.5 text-sm font-medium text-blue-700 transition hover:bg-blue-50"
+                  title="View booking info"
+                  aria-label="View booking info"
+                  className="flex-shrink-0 rounded-full p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-blue-600"
+                >
+                  <Info size={18} />
+                </button>
+              </div>
+
+              {/* Status chips */}
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    STATUS_STYLES[b.status] ?? 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {b.status}
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                    PAYMENT_STATUS_STYLES[b.paymentStatus] ?? 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {b.paymentStatus || 'Unpaid'}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+                    b.documentsVerified
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {b.documentsVerified ? (
+                    <>
+                      <ShieldCheck size={12} /> Verified
+                    </>
+                  ) : (
+                    'Not verified'
+                  )}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-4 grid grid-cols-2 gap-2 border-t border-gray-100 pt-4 sm:flex sm:flex-wrap">
+                <button
+                  onClick={() => setReviewing(b)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50"
                 >
                   <Eye size={14} />
                   Review &amp; validate
                 </button>
-                <button
-                  onClick={() => setEditing(b)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                >
-                  <Pencil size={14} />
-                  Edit details
-                </button>
+                
 
                 {(ACTIONS[b.status] ?? []).map((a) => {
                   // Approval is blocked until the admin validates the documents.
@@ -359,20 +273,20 @@ const BookingManagement = () => {
                       title={
                         blocked ? 'Validate the documents before approving' : undefined
                       }
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${a.cls}`}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${a.cls}`}
                     >
                       <a.icon size={14} />
                       {a.label}
                     </button>
                   );
                 })}
-
-                {b.status === 'Pending' && !b.documentsVerified && (
-                  <span className="text-xs text-gray-400">
-                    Validate documents to enable approval
-                  </span>
-                )}
               </div>
+
+              {b.status === 'Pending' && !b.documentsVerified && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Validate documents (Review &amp; validate) to enable approval.
+                </p>
+              )}
             </div>
           ))}
 
@@ -386,14 +300,6 @@ const BookingManagement = () => {
             />
           </div>
         </div>
-      )}
-
-      {editing && (
-        <EditBookingModal
-          booking={editing}
-          onClose={() => setEditing(null)}
-          onSaved={handleSaved}
-        />
       )}
 
       {reviewing && (
@@ -414,143 +320,10 @@ const Detail = ({ label, value, className = '' }) => (
   </div>
 );
 
-// Link to an uploaded document (ID, license, receipt); renders nothing if absent.
-const DocLink = ({ url, label }) => {
-  if (!url) return null;
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
-    >
-      <FileText size={13} />
-      {label}
-    </a>
-  );
-};
-
-// --- Edit modal: reschedule + change handover time/place/method + notes ---
-const EditBookingModal = ({ booking, onClose, onSaved }) => {
-  const [form, setForm] = useState({
-    startDate: booking.startDate,
-    endDate: booking.endDate,
-    driveType: booking.driveType,
-    handover: booking.handover,
-    location: booking.location || '',
-    pickupTime: booking.pickupTime || '',
-    notes: booking.notes || '',
-  });
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const set = (field) => (e) =>
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
-
-  const handleSave = async () => {
-    setError('');
-    if (new Date(form.endDate) <= new Date(form.startDate)) {
-      setError('End date must be after the start date.');
-      return;
-    }
-    setSaving(true);
-    try {
-      const updated = await bookingsApi.update(booking.id, {
-        startDate: form.startDate,
-        endDate: form.endDate,
-        driveType: form.driveType,
-        handover: form.handover,
-        location: form.location.trim() || undefined,
-        pickupTime: form.pickupTime || undefined,
-        notes: form.notes.trim() || undefined,
-      });
-      onSaved(updated);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save changes');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Edit booking #{booking.id}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={20} />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-600">
-            {error}
-          </div>
-        )}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Start date</label>
-            <input type="date" value={form.startDate} onChange={set('startDate')} className={inputCls} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">End date</label>
-            <input type="date" value={form.endDate} onChange={set('endDate')} className={inputCls} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Drive type</label>
-            <select value={form.driveType} onChange={set('driveType')} className={inputCls}>
-              <option value="Self Drive">Self Drive</option>
-              <option value="With Driver">With Driver</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Handover</label>
-            <select value={form.handover} onChange={set('handover')} className={inputCls}>
-              <option value="Pickup">Pickup (client gets the car)</option>
-              <option value="Delivery">Delivery (drop the car)</option>
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              {form.handover === 'Delivery' ? 'Delivery address' : 'Pickup point'}
-            </label>
-            <input type="text" value={form.location} onChange={set('location')} className={inputCls} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Time</label>
-            <input type="time" value={form.pickupTime} onChange={set('pickupTime')} className={inputCls} />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Notes</label>
-            <textarea rows={2} value={form.notes} onChange={set('notes')} className={inputCls} />
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // --- Review & validate modal: full client submission + validation controls ---
 const isImageUrl = (url) => url && /\.(jpg|jpeg|png|webp|gif)$/i.test(url);
 
-const DocPreview = ({ url, label }) => {
+const DocPreview = ({ url, label, onView }) => {
   if (!url) {
     return (
       <div className="rounded-lg border border-dashed border-gray-200 p-3 text-center text-xs text-gray-400">
@@ -562,23 +335,67 @@ const DocPreview = ({ url, label }) => {
     <div className="rounded-lg border border-gray-200 p-2">
       <p className="mb-1.5 text-xs font-medium text-gray-500">{label}</p>
       {isImageUrl(url) ? (
-        <a href={url} target="_blank" rel="noreferrer">
+        <button
+          type="button"
+          onClick={() => onView({ url, label, isImage: true })}
+          className="block w-full"
+        >
           <img
             src={url}
             alt={label}
             className="h-32 w-full rounded object-cover transition hover:opacity-90"
           />
-        </a>
+        </button>
       ) : (
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          type="button"
+          onClick={() => onView({ url, label, isImage: false })}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700"
         >
-          <FileText size={15} /> Open document
-        </a>
+          <FileText size={15} /> View document
+        </button>
       )}
+    </div>
+  );
+};
+
+// Full-screen viewer for a document (image or PDF), shown over the modal.
+const DocLightbox = ({ doc, onClose }) => {
+  if (!doc) return null;
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition hover:bg-white/20"
+      >
+        <X size={22} />
+      </button>
+      <div
+        className="max-h-[90vh] w-full max-w-4xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="mb-2 text-center text-sm font-medium text-white/80">
+          {doc.label}
+        </p>
+        {doc.isImage ? (
+          <img
+            src={doc.url}
+            alt={doc.label}
+            className="mx-auto max-h-[80vh] w-auto rounded-lg object-contain"
+          />
+        ) : (
+          <iframe
+            src={doc.url}
+            title={doc.label}
+            className="h-[80vh] w-full rounded-lg bg-white"
+          />
+        )}
+      </div>
     </div>
   );
 };
@@ -592,6 +409,7 @@ const ReviewBookingModal = ({ booking, onClose, onSaved }) => {
   );
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState(null);
 
   const isSelf = booking.driveType === 'Self Drive';
 
@@ -685,9 +503,19 @@ const ReviewBookingModal = ({ booking, onClose, onSaved }) => {
             Uploaded documents
           </h3>
           <div className="grid gap-3 sm:grid-cols-3">
-            <DocPreview url={booking.idImage} label="Valid ID" />
-            {isSelf && <DocPreview url={booking.licenseImage} label="Driver's license" />}
-            <DocPreview url={booking.downpaymentProof} label="Payment receipt" />
+            <DocPreview url={booking.idImage} label="Valid ID" onView={setViewingDoc} />
+            {isSelf && (
+              <DocPreview
+                url={booking.licenseImage}
+                label="Driver's license"
+                onView={setViewingDoc}
+              />
+            )}
+            <DocPreview
+              url={booking.downpaymentProof}
+              label="Payment receipt"
+              onView={setViewingDoc}
+            />
           </div>
         </div>
 
@@ -744,6 +572,8 @@ const ReviewBookingModal = ({ booking, onClose, onSaved }) => {
           </button>
         </div>
       </div>
+
+      <DocLightbox doc={viewingDoc} onClose={() => setViewingDoc(null)} />
     </div>
   );
 };
