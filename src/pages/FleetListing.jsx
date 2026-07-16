@@ -251,7 +251,7 @@ const FleetListing = () => {
             {/* Available only */}
             <FilterSection title="Availability">
               <label className="flex cursor-pointer items-center justify-between text-sm text-gray-700">
-                Available now only
+                Available now
                 <button
                   type="button"
                   role="switch"
