@@ -13,6 +13,7 @@ import {
 
 import { bookingsApi, ApiError } from '../../api';
 import Pagination from '../../components/Pagination';
+import { NOTIFICATION_EVENT } from '../../context/notifications-context';
 
 const STATUS_STYLES = {
   Pending: 'bg-amber-50 text-amber-700',
@@ -86,6 +87,24 @@ const BookingManagement = () => {
     return () => {
       active = false;
     };
+  }, []);
+
+  // Live updates: when a booking is created or cancelled anywhere, the admin's
+  // list reflects it immediately — no refresh needed. The notification carries
+  // the full booking (with its client/vehicle) as `detail.booking`.
+  useEffect(() => {
+    const onNotify = (e) => {
+      const booking = e.detail?.booking;
+      if (!booking) return;
+      setBookings((prev) => {
+        const exists = prev.some((b) => b.id === booking.id);
+        return exists
+          ? prev.map((b) => (b.id === booking.id ? booking : b))
+          : [booking, ...prev];
+      });
+    };
+    window.addEventListener(NOTIFICATION_EVENT, onNotify);
+    return () => window.removeEventListener(NOTIFICATION_EVENT, onNotify);
   }, []);
 
   const counts = useMemo(() => {

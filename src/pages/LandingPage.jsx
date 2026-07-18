@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import alldriveLogo from '../assets/images/all-drive.png';
 import { useAuth } from '../context/auth-context';
 import { vehiclesApi, ApiError } from '../api';
 import VehicleCard from '../components/VehicleCard';
+import SiteHeader from '../components/SiteHeader';
 
 // Testimonials data
 const testimonials = [
@@ -65,7 +65,7 @@ const PAGE_SIZE = 6;
 const ROTATE_MS = 5000;
 
 const LandingPage = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [allVehicles, setAllVehicles] = useState([]);
   const [offset, setOffset] = useState(0);
   const [fleetLoading, setFleetLoading] = useState(true);
@@ -126,40 +126,8 @@ const LandingPage = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <img src={alldriveLogo} alt="AllDrive Logo" className="h-14 w-auto" />
-
-          <nav className="hidden items-center gap-8 text-sm font-medium md:flex">
-            <Link to="/" className="text-gray-900 hover:text-blue-600">Home</Link>
-            <Link to="/vehicles" className="text-gray-600 hover:text-blue-600">Our Fleet</Link>
-            <Link to="/about" className="text-gray-600 hover:text-blue-600">About Us</Link>
-            <Link to="/services" className="text-gray-600 hover:text-blue-600">Services</Link>
-            <Link to="/contact" className="text-gray-600 hover:text-blue-600">Contact</Link>
-          </nav>
-
-          <div className="flex items-center gap-3 text-sm">
-            {user ? (
-              <>
-                <span className="text-gray-600">Hi, <span className="font-medium text-gray-900">{user.name}</span></span>
-                <button onClick={logout} className="rounded-xl bg-gray-900 px-5 py-2 font-medium text-white transition hover:bg-gray-800">
-                  Log out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link to="/login" className="rounded-xl px-5 py-2 font-medium text-gray-600 transition hover:bg-gray-100">
-                  Log in
-                </Link>
-                <Link to="/register" className="rounded-xl bg-blue-600 px-5 py-2 font-medium text-white transition hover:bg-blue-700">
-                  Sign Up
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* Header (shared, with responsive mobile nav row) */}
+      <SiteHeader />
 
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-white px-6 py-20 text-center">
@@ -192,7 +160,7 @@ const LandingPage = () => {
           <div className="mb-8 flex items-center justify-center gap-3">
             <StarRating rating={5} />
             <span className="text-sm font-medium text-gray-700">5.0</span>
-            <span className="text-sm text-gray-400">from 80+ reviews</span>
+            <span className="text-sm text-gray-400">from 90+ reviews</span>
           </div>
 
 
@@ -211,7 +179,7 @@ const LandingPage = () => {
               <div className="mt-1 text-sm text-gray-500">Our Esteemed Clients and Partners</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900">6+</div>
+              <div className="text-4xl font-bold text-gray-900">7+</div>
               <div className="mt-1 text-sm text-gray-500">Years of Dedicated Service</div>
             </div>
             <div className="text-center">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Star, Car, X } from 'lucide-react';
+import SiteFooter from '../components/SiteFooter';
 
 import { vehiclesApi, ApiError } from '../api';
 import SiteHeader from '../components/SiteHeader';
@@ -429,6 +430,7 @@ const FleetListing = () => {
           )}
         </main>
       </div>
+      <SiteFooter/>
     </div>
   );
 };

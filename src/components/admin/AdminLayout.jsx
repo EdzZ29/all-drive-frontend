@@ -3,6 +3,8 @@ import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 
 import AdminSidebar from './AdminSidebar';
+import AdminTopbarActions from './AdminTopbarActions';
+import { NotificationsProvider } from '../../context/NotificationsProvider';
 import alldriveLogo from '../../assets/images/all-drive.png';
 
 // Shell for all admin pages: a sidebar that collapses to icons on desktop and
@@ -21,6 +23,7 @@ const AdminLayout = () => {
     });
 
   return (
+    <NotificationsProvider>
     <div className="flex min-h-screen bg-gray-50">
       {/* Desktop sidebar */}
       <div className="sticky top-0 hidden h-screen lg:block">
@@ -56,6 +59,14 @@ const AdminLayout = () => {
             <Menu size={22} />
           </button>
           <img src={alldriveLogo} alt="AllDrive" className="h-8 w-auto" />
+          <div className="ml-auto">
+            <AdminTopbarActions />
+          </div>
+        </div>
+
+        {/* Desktop top bar: notifications, settings, profile */}
+        <div className="sticky top-0 z-30 hidden items-center justify-end border-b border-gray-200 bg-white px-6 py-3 lg:flex">
+          <AdminTopbarActions />
         </div>
 
         <div className="flex-1">
@@ -63,6 +74,7 @@ const AdminLayout = () => {
         </div>
       </main>
     </div>
+    </NotificationsProvider>
   );
 };
 

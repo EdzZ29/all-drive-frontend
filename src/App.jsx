@@ -15,6 +15,8 @@ import FleetListing from "./pages/FleetListing";
 import Booking from "./pages/client/Booking";
 import BookingManagement from "./pages/admin/BookingManagement";
 import BookingHistory from "./pages/admin/BookingHistory";
+import AdminProfile from "./pages/admin/Profile";
+import AdminSettings from "./pages/admin/Settings";
 
 function App() {
   return (
@@ -53,6 +55,8 @@ function App() {
         <Route path="vehicles/:id" element={<VehicleDetails />} />
         <Route path="vehicles/:id/edit" element={<VehicleForm />} />
         <Route path="vehicles/new" element={<VehicleForm />} />
+        <Route path="profile" element={<AdminProfile />} />
+        <Route path="settings" element={<AdminSettings />} />
       </Route>
 
       {/* Client-only */}

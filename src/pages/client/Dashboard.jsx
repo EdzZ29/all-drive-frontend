@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Car, CalendarCheck, ArrowRight } from 'lucide-react';
 
 import { useAuth } from '../../context/auth-context';
 import { bookingsApi, ApiError } from '../../api';
+import { useBookingStream } from '../../hooks/useBookingStream';
 
 const STATUS_STYLES = {
   Pending: 'bg-amber-50 text-amber-700',
@@ -36,15 +37,28 @@ const Dashboard = () => {
     };
   }, []);
 
+  // Live updates: when an admin approves/completes/declines this client's
+  // booking, its row updates instantly — no refresh needed.
+  useBookingStream(
+    useCallback((booking) => {
+      setBookings((prev) => {
+        const exists = prev.some((b) => b.id === booking.id);
+        return exists
+          ? prev.map((b) => (b.id === booking.id ? booking : b))
+          : [booking, ...prev];
+      });
+    }, []),
+  );
+
   const activeCount = bookings.filter(
     (b) => b.status === 'Pending' || b.status === 'Approved',
   ).length;
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
+          <h1 className="text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">
             Welcome, {user?.name}
           </h1>
           <p className="mt-1 text-sm text-gray-500">Manage your rentals and bookings.</p>
@@ -99,7 +113,8 @@ const Dashboard = () => {
             to get started.
           </p>
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[32rem] text-left text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-wide text-gray-400">
                 <th className="px-5 py-2.5 font-medium">Vehicle</th>
@@ -131,6 +146,7 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

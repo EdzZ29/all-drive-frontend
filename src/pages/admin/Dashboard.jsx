@@ -5,8 +5,6 @@ import {
   CheckCircle2,
   CalendarCheck,
   Wrench,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 import { vehiclesApi, bookingsApi, ApiError } from '../../api';
@@ -27,19 +25,12 @@ const PERIODS = [
   { key: 'all', label: 'All' },
 ];
 
-const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
 const Dashboard = () => {
   const [vehicles, setVehicles] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [period, setPeriod] = useState('all');
-
-  const [cal, setCal] = useState(() => {
-    const n = new Date();
-    return { y: n.getFullYear(), m: n.getMonth() };
-  });
 
   useEffect(() => {
     let active = true;
@@ -91,41 +82,6 @@ const Dashboard = () => {
       .slice(0, 8);
   }, [bookings, period]);
 
-  // Days in the calendar month that have a booking starting on them.
-  const bookedDays = useMemo(() => {
-    const set = new Set();
-    for (const b of bookings) {
-      if (!b.startDate) continue;
-      const [y, m, d] = String(b.startDate).split('-').map(Number);
-      if (y === cal.y && m - 1 === cal.m) set.add(d);
-    }
-    return set;
-  }, [bookings, cal]);
-
-  const today = new Date();
-  const firstDay = new Date(cal.y, cal.m, 1).getDay();
-  const daysInMonth = new Date(cal.y, cal.m + 1, 0).getDate();
-  const monthLabel = new Date(cal.y, cal.m, 1).toLocaleString('default', {
-    month: 'long',
-    year: 'numeric',
-  });
-  const cells = [
-    ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  const shiftMonth = (delta) =>
-    setCal(({ y, m }) => {
-      const nm = m + delta;
-      if (nm < 0) return { y: y - 1, m: 11 };
-      if (nm > 11) return { y: y + 1, m: 0 };
-      return { y, m: nm };
-    });
-  const isToday = (d) =>
-    d &&
-    today.getFullYear() === cal.y &&
-    today.getMonth() === cal.m &&
-    today.getDate() === d;
-
   return (
     <div className="mx-auto max-w-10xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-6">
@@ -157,9 +113,9 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6">
         {/* Recent bookings */}
-        <div className="rounded-2xl border border-gray-200 bg-white lg:col-span-2">
+        <div className="rounded-2xl border border-gray-200 bg-white">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
             <h2 className="text-sm font-semibold text-gray-900">Recent bookings</h2>
             <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
@@ -225,65 +181,6 @@ const Dashboard = () => {
             <Link to="/admin/bookings" className="text-xs font-medium text-blue-600 hover:text-blue-700">
               Manage all bookings →
             </Link>
-          </div>
-        </div>
-
-        {/* Calendar */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Calendar</h2>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => shiftMonth(-1)}
-                className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-                aria-label="Previous month"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="min-w-[7.5rem] text-center text-sm font-medium text-gray-700">
-                {monthLabel}
-              </span>
-              <button
-                onClick={() => shiftMonth(1)}
-                className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
-                aria-label="Next month"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 text-center">
-            {WEEKDAYS.map((d, i) => (
-              <div key={i} className="py-1 text-xs font-medium text-gray-400">
-                {d}
-              </div>
-            ))}
-            {cells.map((d, i) => (
-              <div key={i} className="flex items-center justify-center">
-                {d ? (
-                  <div
-                    className={`relative flex h-9 w-9 items-center justify-center rounded-full text-sm ${
-                      isToday(d)
-                        ? 'bg-blue-600 font-semibold text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {d}
-                    {bookedDays.has(d) && !isToday(d) && (
-                      <span className="absolute bottom-1 h-1 w-1 rounded-full bg-blue-500" />
-                    )}
-                  </div>
-                ) : (
-                  <span />
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 border-t border-gray-100 pt-3 text-xs text-gray-500">
-            <span className="h-2 w-2 rounded-full bg-blue-500" />
-            Booking start date
           </div>
         </div>
       </div>

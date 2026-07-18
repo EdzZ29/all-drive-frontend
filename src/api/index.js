@@ -5,3 +5,4 @@ export { vehiclesApi } from './vehicles';
 export { bookingsApi } from './bookings';
 export { usersApi } from './users';
 export { uploadsApi } from './uploads';
+export { notificationsApi } from './notifications';
